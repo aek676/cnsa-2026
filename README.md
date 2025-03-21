@@ -16,8 +16,15 @@ Used for web apps deployment
    ```
    cp terraform.tfvars.example terraform.tfvars
    ```
-   
-2. Edit the `terraform.tfvars` file to add your Azure credentials:
+2. Get your Azure credentials with:
+
+   ```bash
+   az login
+   az account set --subscription="YOUR_SUBSCRIPTION_ID"
+   az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/YOUR_SUBSCRIPTION_ID"
+   ```
+
+3. Edit the `terraform.tfvars` file to add your Azure credentials:
    ```
    azure_subscription_id = "your-subscription-id"
    azure_tenant_id       = "your-tenant-id"
@@ -25,13 +32,13 @@ Used for web apps deployment
    azure_client_secret   = "your-client-secret"
    ```
 
-3. Ensure you have a valid SSH key at `~/.ssh/id_rsa.pub`
+4. Ensure you have a valid SSH key at `~/.ssh/id_rsa.pub`
    If not, generate a new one with:
    ```
    ssh-keygen -t rsa -b 4096
    ```
 
-4. Run Terraform commands directly:
+5. Run Terraform commands directly:
    ```
    terraform init
    terraform plan
@@ -46,17 +53,7 @@ The command `terraform apply` will create:
 - 1 Virtual Network with subnet
 - 1 Network Security Group with rules for SSH (port 22), HTTP (port 80), and Jenkins (port 8080)
 - 2 Virtual machine instances with Ubuntu 22.04 LTS
-- 2 Public IP addresses
-
-## Authenticating to Azure
-
-Before creating your `terraform.tfvars` file, you can get your Azure credentials with:
-
-```bash
-az login
-az account set --subscription="YOUR_SUBSCRIPTION_ID"
-az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/YOUR_SUBSCRIPTION_ID"
-```
+- 2 Dynamic Public IP addresses, with a DNS assigned.
 
 ## Troubleshooting
 
