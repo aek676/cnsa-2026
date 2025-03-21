@@ -1,59 +1,77 @@
 variable "instance_name" {}
-variable "instance_region" {}
-variable "instance_zone" {}
-variable "instance_type" {
-  default = "n1-standard-1"
+variable "location" {}
+variable "resource_group_name" {}
+variable "subnet_id" {}
+variable "admin_username" {
+  default = "azureuser"
 }
-variable "image" {
-  default = "ubuntu-os-cloud/ubuntu-1804-lts"
+variable "vm_size" {
+  default = "Standard_B2s" # Equivalent to e2-medium (2 vCPU, 4 GB)
 }
-variable "instance_subnetwork" {}
-variable "startup_script" {
+variable "custom_data" {
   default = ""
 }
 
-# New static External IP for the VM
-resource "google_compute_address" "static" {
-  name   = "ipv4-address-${var.instance_name}"
-  region = var.instance_region
+# Create public IP address
+resource "azurerm_public_ip" "public_ip" {
+  name                = "${var.instance_name}-public-ip"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  allocation_method   = "Static"
 }
 
-# New VM
-resource "google_compute_instance" "vm_instance" {
-  name         = var.instance_name
-  zone         = var.instance_zone
-  machine_type = var.instance_type
-  boot_disk {
-    initialize_params {
-      image = var.image
-      size = 30
-    }
+# Create network interface
+resource "azurerm_network_interface" "nic" {
+  name                = "${var.instance_name}-nic"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = var.subnet_id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.public_ip.id
+  }
+}
+
+# Create Linux Virtual Machine
+resource "azurerm_linux_virtual_machine" "vm" {
+  name                = var.instance_name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  size                = var.vm_size
+  admin_username      = var.admin_username
+  network_interface_ids = [
+    azurerm_network_interface.nic.id,
+  ]
+
+  admin_ssh_key {
+    username   = var.admin_username
+    public_key = file("~/.ssh/id_rsa.pub")
   }
 
-  # Add SSH access to the Compute Engine instance
-  metadata = {
-    ssh-keys = "ubuntu:${file("~/.ssh/id_rsa.pub")}"
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+    disk_size_gb         = 30
   }
 
-  # Startup script
-  # metadata_startup_script = "${file("update-docker.sh")}"
-
-  network_interface {
-    network = var.instance_subnetwork
-    access_config {
-      # Allocate a one-to-one NAT IP to the instance
-      nat_ip = google_compute_address.static.address
-      # network_tier="STANDARD"  # PREMIUM or STANDARD. If this field is not specified, it is assumed to be PREMIUM.
-    }
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts"
+    version   = "latest"
   }
+
+  custom_data = var.custom_data
 }
 
 output "instance_ip_addr" {
-  value       = google_compute_address.static.address
-  description = "The private IP address of the main server instance."
+  value       = azurerm_public_ip.public_ip.ip_address
+  description = "The public IP address of the VM instance."
 }
 
 output "instance_name" {
   value       = var.instance_name
-  description = "The private IP address of the main server instance."
+  description = "The name of the VM instance."
 }

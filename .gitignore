@@ -6,3 +6,5 @@ instance-with-ip/
 debug.log
 .terraform.*
 credentials/
+terraform.tfvars
+.env

@@ -1,145 +1,88 @@
 # Para mas detalles (opocional): export TF_LOG=TRACE
 
-
 # Create the mynetwork network
-resource "google_compute_network" "mynetwork" {
-  name                    = "mynetwork-tf"
-  auto_create_subnetworks = "true"
-  project                 = var.gcp_project
+resource "azurerm_virtual_network" "mynetwork" {
+  name                = "mynetwork-tf"
+  address_space       = ["10.0.0.0/16"]
+  location            = var.resource_group_location
+  resource_group_name = azurerm_resource_group.rg.name
 }
 
-# Add a firewall rule to allow HTTP, SSH, RDP, and ICMP traffic on mynetwork
-resource "google_compute_firewall" "mynetwork-allow-http-ssh-rdp-icmp" {
-  name    = "mynetwork-tf-allow-http-ssh-rdp-icmp"
-  network = google_compute_network.mynetwork.name
-  allow {
-    protocol = "tcp"
-    ports    = ["22", "80", "8080"]
-  }
-  
-  # firewall will apply  to traffic that has source IP address in these ranges, any IP: 0.0.0.0/0
-  source_ranges = ["0.0.0.0/0"]   
+# Create a subnet for the virtual machines
+resource "azurerm_subnet" "subnet" {
+  name                 = "internal"
+  resource_group_name  = azurerm_resource_group.rg.name
+  virtual_network_name = azurerm_virtual_network.mynetwork.name
+  address_prefixes     = ["10.0.1.0/24"]
+}
 
-  allow {
-    protocol = "icmp"
+# Create a Network Security Group with rules similar to the GCP firewall
+resource "azurerm_network_security_group" "nsg" {
+  name                = "mynetwork-tf-nsg"
+  location            = var.resource_group_location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  security_rule {
+    name                       = "SSH"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
   }
+
+  security_rule {
+    name                       = "HTTP"
+    priority                   = 110
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "80"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "Jenkins"
+    priority                   = 120
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "8080"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+}
+
+# Associate the NSG with the subnet
+resource "azurerm_subnet_network_security_group_association" "nsg_association" {
+  subnet_id                 = azurerm_subnet.subnet.id
+  network_security_group_id = azurerm_network_security_group.nsg.id
 }
 
 # Create the jenkins-vm instance
 module "jenkins-vm" {
-  source          = "./instance"
-  instance_name   = "jenkins-vm-tf"
-  instance_region = "us-central1"
-  instance_zone   = "us-central1-a"
-  instance_type   = "e2-medium"
-  image           = "ubuntu-os-cloud/ubuntu-2204-lts" # ubuntu-2204-lts"
-  #  startup_script      = "${var.init_scrip_docker}"
-  instance_subnetwork = google_compute_network.mynetwork.self_link
+  source              = "./instance"
+  instance_name       = "jenkins-vm-tf"
+  location            = var.resource_group_location
+  resource_group_name = azurerm_resource_group.rg.name
+  subnet_id           = azurerm_subnet.subnet.id
+  admin_username      = "azureuser"
+  custom_data         = base64encode(file("${path.module}/scripts/jenkins_init.sh"))
 }
 
-# Create the web-deploy-vm" instance
+# Create the web-deploy-vm instance
 module "web-deploy-vm" {
-  source          = "./instance"
-  instance_name   = "web-deploy-vm-tf"
-  instance_region = "us-central1"
-  instance_zone   = "us-central1-a"
-  instance_type   = "e2-medium"
-  image           = "ubuntu-os-cloud/ubuntu-2204-lts"  #ubuntu-2204-lts"  
-  #  startup_script      = "${var.init_scrip_apache2}"
-  instance_subnetwork = google_compute_network.mynetwork.self_link
-}
-
-
-resource "null_resource" "provision-jenkins-vm" {
-
-  provisioner "remote-exec" {
-    connection {
-      host        = module.jenkins-vm.instance_ip_addr
-      type        = "ssh"
-      user        = "ubuntu"
-      private_key = file("~/.ssh/id_rsa")
-    }
-
-    ## Script inicialización jenkins-vm
-    inline = [
-      "sudo apt-get update -y",
-      "echo '* libraries/restart-without-asking boolean true' | sudo debconf-set-selections",
-      "echo 'debconf debconf/frontend select Noninteractive'  | sudo debconf-set-selections",
-      "sudo apt-get upgrade -y",
-      "sudo apt-get install -y python-minimal",
-      "sudo timedatectl set-timezone Europe/Madrid",
-      # Instalacion de docker
-      # Add Docker's official GPG key:
-      "sudo apt-get update",
-      "sudo apt-get install ca-certificates",
-      "sudo install -m 0755 -d /etc/apt/keyrings",
-      "sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc",
-      "sudo chmod a+r /etc/apt/keyrings/docker.asc",
-      # Add the repository to Apt sources:
-      "echo \\",
-      "  \"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \\",
-      "  $(. /etc/os-release && echo \"$VERSION_CODENAME\") stable\" | \\",
-      "  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
-      "sudo apt-get update",
-      "sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y",
-      "sudo usermod -aG docker $${USER}",
-    ]
-    on_failure = continue
-  }
-  depends_on = [
-    # Init script must be created before this IP address could
-    # actually be used, otherwise the services will be unreachable.
-    module.jenkins-vm.instance_ip_addr
-  ]
-}
-
-resource "null_resource" "provision-deploy-vm" {
-
-  provisioner "remote-exec" {
-    connection {
-      host        = module.web-deploy-vm.instance_ip_addr
-      type        = "ssh"
-      user        = "ubuntu"
-      private_key = file("~/.ssh/id_rsa")
-    }
-
-    ## Script inicialización web-deploy-vm
-    inline = [
-      "sudo apt-get update -y",
-      "echo '* libraries/restart-without-asking boolean true' | sudo debconf-set-selections",
-      "echo 'debconf debconf/frontend select Noninteractive'  | sudo debconf-set-selections",
-      "sudo apt-get upgrade -y",
-      "sudo apt-get install -y python-minimal",
-      "sudo timedatectl set-timezone Europe/Madrid",
-      # Instalacion de docker
-      # Add Docker's official GPG key:
-      "sudo apt-get update",
-      "sudo apt-get install ca-certificates",
-      "sudo install -m 0755 -d /etc/apt/keyrings",
-      "sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc",
-      "sudo chmod a+r /etc/apt/keyrings/docker.asc",
-      # Add the repository to Apt sources:
-      "echo \\",
-      "  \"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \\",
-      "  $(. /etc/os-release && echo \"$VERSION_CODENAME\") stable\" | \\",
-      "  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
-      "sudo apt-get update",
-      "sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y",
-      "sudo usermod -aG docker $${USER}",
-      # Instalacion de Java jdk 17
-      "sudo apt install openjdk-17-jdk -y",
-      "echo JAVA_HOME=\"/usr/lib/jvm/java-17-openjdk-amd64\" | sudo tee -a /etc/environment",
-      # Instalacion de Node JS LTS. Install Node.js and npm using the Node Version Manager (nvm)
-      "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash",
-      "export NVM_DIR=\"$HOME/.nvm\"",
-      "[ -s \"$NVM_DIR/nvm.sh\" ] && \\. \"$NVM_DIR/nvm.sh\"",
-      "nvm install --lts"
-    ]
-    on_failure = continue
-  }
-  depends_on = [
-    # Init script must be created before this IP address could
-    # actually be used, otherwise the services will be unreachable.
-    module.web-deploy-vm.instance_ip_addr
-  ]
+  source              = "./instance"
+  instance_name       = "web-deploy-vm-tf"
+  location            = var.resource_group_location
+  resource_group_name = azurerm_resource_group.rg.name
+  subnet_id           = azurerm_subnet.subnet.id
+  admin_username      = "azureuser"
+  custom_data         = base64encode(file("${path.module}/scripts/webapp_init.sh"))
 }

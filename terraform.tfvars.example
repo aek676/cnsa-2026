@@ -1,0 +1,9 @@
+# Azure authentication variables
+azure_subscription_id = "your-subscription-id"
+azure_tenant_id       = "your-tenant-id"
+azure_client_id       = "your-client-id"
+azure_client_secret   = "your-client-secret"
+
+# Resource group variables
+resource_group_name     = "cnsa-2024-rg"
+resource_group_location = "eastus"
