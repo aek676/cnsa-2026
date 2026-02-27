@@ -82,6 +82,7 @@ module "jenkins-vm" {
   source              = "./instance"
   instance_name       = "jenkins-vm-tf"
   location            = var.resource_group_location
+  ssh_public_key      = var.ssh_public_key
   resource_group_name = azurerm_resource_group.rg.name
   subnet_id           = azurerm_subnet.subnet.id
   admin_username      = "azureuser"
@@ -93,6 +94,7 @@ module "web-deploy-vm" {
   source              = "./instance"
   instance_name       = "web-deploy-vm-tf"
   location            = var.resource_group_location
+  ssh_public_key      = var.ssh_public_key
   resource_group_name = azurerm_resource_group.rg.name
   subnet_id           = azurerm_subnet.subnet.id
   admin_username      = "azureuser"

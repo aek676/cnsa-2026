@@ -2,6 +2,8 @@ variable "instance_name" {}
 variable "location" {}
 variable "resource_group_name" {}
 variable "subnet_id" {}
+variable "ssh_public_key" {}
+
 variable "admin_username" {
   default = "azureuser"
 }
@@ -19,7 +21,7 @@ resource "azurerm_public_ip" "public_ip" {
   name                = "${var.instance_name}-public-ip"
   location            = var.location
   resource_group_name = var.resource_group_name
-  allocation_method   = "Dynamic"
+  allocation_method   = "Static"
   domain_name_label   = "${var.instance_name}-${substr(data.azurerm_client_config.current.client_id, 0, 6)}"
 }
 
@@ -50,7 +52,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
 
   admin_ssh_key {
     username   = var.admin_username
-    public_key = file("~/.ssh/id_rsa.pub")
+    public_key = var.ssh_public_key
   }
 
   os_disk {
