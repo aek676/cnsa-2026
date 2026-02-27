@@ -1,9 +1,6 @@
-# Azure authentication variables
-azure_subscription_id = "your-subscription-id"
-azure_tenant_id       = "your-tenant-id"
-azure_client_id       = "your-client-id"
-azure_client_secret   = "your-client-secret"
-
 # Resource group variables
-resource_group_name     = "cnsa-2024-rg"
-resource_group_location = "eastus"
+resource_group_name     = "cnsa-2026-rg"
+resource_group_location = "swedencentral"
+
+## SSH public key for VM access
+ssh_public_key          = "ssh- "
