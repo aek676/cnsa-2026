@@ -1,13 +1,13 @@
 variable "resource_group_location" {
   description = "Location of the resource group"
   type        = string
-  default     = "eastus" # This default will be overridden by the env variable if present
+  default     = "eastus"
 }
 
 variable "resource_group_name" {
   description = "Name of the resource group"
   type        = string
-  default     = "cnsa-2024-rg" # This default will be overridden by the env variable if present
+  default     = "cnsa-2024-rg"
 }
 
 variable "org_name" {
@@ -25,5 +25,4 @@ variable "ssh_public_key" {
   type        = string
   default     = ""
 }
-
 
