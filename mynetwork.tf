@@ -1,8 +1,15 @@
 # Para mas detalles (opocional): export TF_LOG=TRACE
 
+# Naming module to generate consistent names for services
+module "naming" {
+  source  = "Azure/naming/azurerm"
+  version = "0.4.3"
+  suffix  = [var.org_name, var.username]
+}
+
 # Create the mynetwork network
 resource "azurerm_virtual_network" "mynetwork" {
-  name                = "mynetwork-tf"
+  name                = module.naming.virtual_network.name
   address_space       = ["10.0.0.0/16"]
   location            = var.resource_group_location
   resource_group_name = azurerm_resource_group.rg.name
@@ -10,7 +17,7 @@ resource "azurerm_virtual_network" "mynetwork" {
 
 # Create a subnet for the virtual machines
 resource "azurerm_subnet" "subnet" {
-  name                 = "internal"
+  name                 = module.naming.subnet.name
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.mynetwork.name
   address_prefixes     = ["10.0.1.0/24"]
@@ -18,7 +25,7 @@ resource "azurerm_subnet" "subnet" {
 
 # Create a Network Security Group with rules similar to the GCP firewall
 resource "azurerm_network_security_group" "nsg" {
-  name                = "mynetwork-tf-nsg"
+  name                = module.naming.network_security_group.name
   location            = var.resource_group_location
   resource_group_name = azurerm_resource_group.rg.name
 
@@ -80,7 +87,9 @@ resource "azurerm_subnet_network_security_group_association" "nsg_association" {
 # Create the jenkins-vm instance
 module "jenkins-vm" {
   source              = "./instance"
-  instance_name       = "jenkins-vm-tf"
+  instance_name       = "jenkins"
+  org_name            = var.org_name
+  username            = var.username
   location            = var.resource_group_location
   ssh_public_key      = var.ssh_public_key
   resource_group_name = azurerm_resource_group.rg.name
@@ -92,7 +101,9 @@ module "jenkins-vm" {
 # Create the web-deploy-vm instance
 module "web-deploy-vm" {
   source              = "./instance"
-  instance_name       = "web-deploy-vm-tf"
+  instance_name       = "web-deploy"
+  org_name            = var.org_name
+  username            = var.username
   location            = var.resource_group_location
   ssh_public_key      = var.ssh_public_key
   resource_group_name = azurerm_resource_group.rg.name

@@ -1,24 +1,14 @@
-variable "instance_name" {}
-variable "location" {}
-variable "resource_group_name" {}
-variable "subnet_id" {}
-variable "ssh_public_key" {}
-
-variable "admin_username" {
-  default = "azureuser"
-}
-variable "vm_size" {
-  default = "Standard_B2s" # Equivalent to e2-medium (2 vCPU, 4 GB)
-}
-variable "custom_data" {
-  default = ""
+module "naming" {
+  source  = "Azure/naming/azurerm"
+  version = "0.4.3"
+  suffix  = [var.org_name, var.instance_name]
 }
 
 data "azurerm_client_config" "current" {}
 
 # Create public IP address
 resource "azurerm_public_ip" "public_ip" {
-  name                = "${var.instance_name}-public-ip"
+  name                = module.naming.public_ip.name
   location            = var.location
   resource_group_name = var.resource_group_name
   allocation_method   = "Static"
@@ -27,7 +17,7 @@ resource "azurerm_public_ip" "public_ip" {
 
 # Create network interface
 resource "azurerm_network_interface" "nic" {
-  name                = "${var.instance_name}-nic"
+  name                = module.naming.network_interface.name
   location            = var.location
   resource_group_name = var.resource_group_name
 
@@ -41,7 +31,7 @@ resource "azurerm_network_interface" "nic" {
 
 # Create Linux Virtual Machine
 resource "azurerm_linux_virtual_machine" "vm" {
-  name                = var.instance_name
+  name                = module.naming.linux_virtual_machine.name
   location            = var.location
   resource_group_name = var.resource_group_name
   size                = var.vm_size
@@ -69,20 +59,4 @@ resource "azurerm_linux_virtual_machine" "vm" {
   }
 
   custom_data = var.custom_data
-}
-
-output "instance_ip_addr" {
-  value       = azurerm_public_ip.public_ip.ip_address
-  description = "The public IP address of the VM instance."
-}
-
-
-output "instance_dns" {
-  value       = azurerm_public_ip.public_ip.domain_name_label
-  description = "The public DNS of the VM instance."
-}
-
-output "instance_name" {
-  value       = var.instance_name
-  description = "The name of the VM instance."
 }

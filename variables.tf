@@ -10,8 +10,20 @@ variable "resource_group_name" {
   default     = "cnsa-2024-rg" # This default will be overridden by the env variable if present
 }
 
+variable "org_name" {
+  description = "Organization name"
+  type        = string
+  default     = "cnsa"
+}
+
+variable "username" {
+  description = "Username for VM access"
+  type        = string
+}
 variable "ssh_public_key" {
   description = "SSH public key for VM access"
   type        = string
   default     = ""
 }
+
+
