@@ -3,5 +3,6 @@ output "vms" {
     hostname  = v.instance_name
     public_ip = v.instance_ip_addr
     dns       = v.instance_dns
-  } }
+    }
+  }
 }

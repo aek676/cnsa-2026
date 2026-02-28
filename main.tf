@@ -6,7 +6,7 @@ locals {
 }
 
 module "vms" {
-  source              = "./instance"
+  source              = "./vms-module"
   for_each            = local.vms
   instance_name       = each.key
   org_name            = var.org_name

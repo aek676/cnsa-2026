@@ -1,4 +1,4 @@
-# Para mas detalles (opocional): export TF_LOG=TRACE
+# Para mas detalles (opcional): export TF_LOG=TRACE
 
 module "naming" {
   source  = "Azure/naming/azurerm"
