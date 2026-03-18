@@ -18,3 +18,10 @@ module "vms" {
   admin_username      = "azureuser"
   custom_data         = base64encode(file("${path.module}/scripts/${each.value}"))
 }
+
+module "artifact_registry" {
+  source        = "./artifact-registry-module"
+  project_id    = var.gcp_project_id
+  location      = var.gcp_location
+  repository_id = "docker-registry"
+}

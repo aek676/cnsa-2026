@@ -4,3 +4,8 @@ resource_group_location = "swedencentral"
 
 ## SSH public key for VM access
 ssh_public_key          = "ssh- "
+
+# GCP
+gcp_project_id = "cnsa2026-aek676"
+gcp_location   = "us-central1"
+

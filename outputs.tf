@@ -6,3 +6,11 @@ output "vms" {
     }
   }
 }
+
+output "artifact_registry" {
+  value = {
+    repository_id  = module.artifact_registry.repository_id
+    repository_url = module.artifact_registry.repository_url
+    id             = module.artifact_registry.id
+  }
+}

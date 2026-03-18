@@ -26,3 +26,14 @@ variable "ssh_public_key" {
   default     = ""
 }
 
+variable "gcp_project_id" {
+  description = "GCP project ID for Artifact Registry"
+  type        = string
+}
+
+variable "gcp_location" {
+  description = "GCP location for Artifact Registry"
+  type        = string
+  default     = "us-central1"
+}
+
