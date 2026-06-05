@@ -9,3 +9,6 @@ ssh_public_key          = "ssh- "
 gcp_project_id = "cnsa2026-aek676"
 gcp_location   = "us-central1"
 
+# cAp
+username       = "pepe"
+cloud_provider = "gcp"
