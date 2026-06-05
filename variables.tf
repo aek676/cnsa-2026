@@ -1,3 +1,12 @@
+variable "cloud_provider" {
+  description = "Cloud provider to deploy (azure or gcp)"
+  type        = string
+  validation {
+    condition     = contains(["azure", "gcp"], var.cloud_provider)
+    error_message = "cloud_provider must be 'azure' or 'gcp'."
+  }
+}
+
 variable "resource_group_location" {
   description = "Location of the resource group"
   type        = string
@@ -27,13 +36,19 @@ variable "ssh_public_key" {
 }
 
 variable "gcp_project_id" {
-  description = "GCP project ID for Artifact Registry"
+  description = "GCP project ID"
   type        = string
 }
 
 variable "gcp_location" {
-  description = "GCP location for Artifact Registry"
+  description = "GCP location/region"
   type        = string
   default     = "us-central1"
+}
+
+variable "gcp_zone" {
+  description = "GCP zone for VM instances"
+  type        = string
+  default     = "us-central1-a"
 }
 
