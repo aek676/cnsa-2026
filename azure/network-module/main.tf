@@ -1,29 +1,27 @@
-# Para mas detalles (opcional): export TF_LOG=TRACE
-
 module "naming" {
   source  = "Azure/naming/azurerm"
   version = "0.4.3"
   suffix  = [var.org_name, var.username]
 }
 
-resource "azurerm_virtual_network" "mynetwork" {
+resource "azurerm_virtual_network" "vnet" {
   name                = module.naming.virtual_network.name
   address_space       = ["10.0.0.0/16"]
   location            = var.resource_group_location
-  resource_group_name = azurerm_resource_group.rg.name
+  resource_group_name = var.resource_group_name
 }
 
 resource "azurerm_subnet" "subnet" {
   name                 = module.naming.subnet.name
-  resource_group_name  = azurerm_resource_group.rg.name
-  virtual_network_name = azurerm_virtual_network.mynetwork.name
+  resource_group_name  = var.resource_group_name
+  virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = ["10.0.1.0/24"]
 }
 
 resource "azurerm_network_security_group" "nsg" {
   name                = module.naming.network_security_group.name
   location            = var.resource_group_location
-  resource_group_name = azurerm_resource_group.rg.name
+  resource_group_name = var.resource_group_name
 
   security_rule {
     name                       = "SSH"
@@ -78,4 +76,3 @@ resource "azurerm_subnet_network_security_group_association" "nsg_association" {
   subnet_id                 = azurerm_subnet.subnet.id
   network_security_group_id = azurerm_network_security_group.nsg.id
 }
-
